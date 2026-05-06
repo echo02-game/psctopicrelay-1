@@ -36,23 +36,26 @@
         .container {
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 60px 20px 20px 20px; /* 增加上方留白，避免按鈕遮擋文字 */
             flex-grow: 1;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            box-sizing: border-box;
+            width: 100%;
         }
 
         /* 登錄頁面 */
         #login-page {
             text-align: center;
             background: var(--white);
-            padding: 40px;
+            padding: 40px 20px; /* Reduced side padding */
             border-radius: 16px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             max-width: 400px;
             margin: auto;
             width: 100%;
+            box-sizing: border-box; /* Prevents padding from causing overflow */
         }
 
         .header-title-small {
@@ -113,12 +116,19 @@
         }
 
         .footer {
-            position: fixed;
-            bottom: 10px;
-            right: 15px;
+            text-align: center; /* Better for mobile */
             color: gray;
             font-size: 0.85rem;
-            z-index: 100;
+            padding: 20px;
+            margin-top: auto; /* Pushes it to the bottom of the flex container */
+            width: 100%;
+            box-sizing: border-box;
+        }
+        @media (min-width: 601px) {
+            .footer {
+                text-align: right;
+                padding-right: 20px;
+            }
         }
 
         /* 隱藏元素 */
@@ -732,11 +742,14 @@
         }
 
         // 音效系統
-        function playBeep() {
+                function playBeep() {
             if (!state.soundEnabled) return;
 
             if (!state.audioCtx) {
                 state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (state.audioCtx.state === 'suspended') {
+                state.audioCtx.resume();
             }
 
             const oscillator = state.audioCtx.createOscillator();
@@ -1135,16 +1148,32 @@
                 setupRelay();
             });
 
+
             // Toggles
             els.soundToggle.addEventListener('click', () => {
                 state.soundEnabled = !state.soundEnabled;
                 els.soundToggle.classList.toggle('active', state.soundEnabled);
                 els.soundToggle.textContent = state.soundEnabled ? '有聲提示' : '靜音模式';
 
-                if (state.soundEnabled && !state.audioCtx) {
-                    state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (state.soundEnabled) {
+                    if (!state.audioCtx) {
+                        state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+                    if (state.audioCtx.state === 'suspended') {
+                        state.audioCtx.resume();
+                    }
+
+                    // 播放一聲測試音效，同時解鎖 iOS 的音頻限制
+                    const oscillator = state.audioCtx.createOscillator();
+                    const gainNode = state.audioCtx.createGain();
+                    oscillator.connect(gainNode);
+                    gainNode.connect(state.audioCtx.destination);
+                    gainNode.gain.value = 0.01; // 非常小聲
+                    oscillator.start();
+                    oscillator.stop(state.audioCtx.currentTime + 0.1);
                 }
             });
+
 
             els.hintToggle.addEventListener('click', () => {
                 state.hintsEnabled = !state.hintsEnabled;
